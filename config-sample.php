@@ -3,9 +3,9 @@
 // Important information. Change as needed.
 $HOIIO_APP_ID 		= "";		// Get from http://developer.hoiio.com
 $HOIIO_ACCESS_TOKEN = "";		// Get from http://developer.hoiio.com
-$HOIIO_NUMBER 		= "";		// eg. +16501234567
-$MY_MOBILE_NUMBER 	= "";		// eg. +16501234567
-$THIS_SERVER_URL 	= "";		// eg. http://my.server.com/script
+$HOIIO_NUMBER 		= "";		// Hoiio Number that you bought eg. +16501234567
+$MY_MOBILE_NUMBER 	= "";		// Your personal mobile number eg. +16501234567
+$THIS_SERVER_URL 	= "";		// Your server URL eg. http://www.example.com/myapp/auto-attendant.php
 
 // Text being read. Change as you like, or use the default.
 $MY_NAME 				= "Junda";
@@ -20,8 +20,8 @@ $TEXT_SMS_ALERT_SENT	= $MY_NAME . ' has received your SMS. He will call you back
 $directory = array(
 	'1'=>array($MY_MOBILE_NUMBER,	"to reach " . $MY_NAME . "'s office phone"),
 	'2'=>array($MY_MOBILE_NUMBER,	"to reach " . $MY_NAME . "'s mobile phone"),
-	'4'=>array('SMSALERT',			"to send " . $MY_NAME . " an SMS, and he will call you back"),
-	'5'=>array('VOICEMAIL',			"to leave " . $MY_NAME . " a voice mail message"),
+	'3'=>array('SMSALERT',			"to send " . $MY_NAME . " an SMS, and he will call you back"),
+	'4'=>array('VOICEMAIL',			"to leave " . $MY_NAME . " a voice mail message"),
 );
 
 // Others

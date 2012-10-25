@@ -15,6 +15,7 @@ $TEXT_TRANSFER_FAILED   = 'Sorry, the call was not answered. Please try again.';
 $TEXT_INVALID_KEY       = 'You have entered an invalid option. Please try again.';
 $TEXT_RECORD_VOICEMAIL  = 'Please leave your voice message after the beep.';
 $TEXT_SMS_ALERT_SENT    = $MY_NAME . ' has received your SMS. He will call you back shortly. Goodbye!';
+$TEXT_RECORDED_AND_HANGUP = "Your message has been recorded. Goodbye!";
 
 // Your transfer directory
 $directory = array(
@@ -25,6 +26,6 @@ $directory = array(
 );
 
 // Others
-$SMS_SENDER_NAME    = $MY_MOBILE_NUMBER;
+$SMS_SENDER_NAME    			= $MY_MOBILE_NUMBER;
 $GOOGLE_URL_SHORTENER_API_KEY   = '';
 ?>

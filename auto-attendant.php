@@ -16,6 +16,24 @@ include 'config.php';
 require 'php-hoiio/Services/HoiioService.php';
 $hoiio = new HoiioService($HOIIO_APP_ID, $HOIIO_ACCESS_TOKEN);
 
+// Logging all Hoiio notifications
+$post_body = file_get_contents('php://input');
+appendToNotificationFile(date("[Y-m-d H:i:s] ") . $post_body);
+
+// The call can be hung up at any point in time
+// If it is "ended", do whatever is needed, then return
+$call_state = $_POST["call_state"];
+if ($call_state == "ended") {
+    // If there is a voicemail
+    if ($_POST["record_url"] != NULL)
+        handleVoiceMail($_POST['from'], $_POST['record_url']);
+    
+    // Log the call
+    $call_record = ">> " . $_POST["from"]. " to " . $_POST["to"] . " for " . $_POST["duration"] . " min [" . $_POST["date"] . "]. Cost: " . $_POST["debit"] . " " . $_POST["currency"];
+    appendToCallRecordFile($call_record);
+    return;
+}
+
 // app_state is the application state at the point when script post to Hoiio
 // Look at $app_state and decide what to do now
 $app_state = $_POST["app_state"];
@@ -72,17 +90,22 @@ switch ($app_state) {
 
     case 'record':
         // State: Recorded voicemail
-        // Action: Send an SMS
-        $recordUrl = $_POST['record_url';
-        $newVoiceMail = "New Voicemail from " . $_POST['from'] . ": " . $recordUrl];
-        appendToVoiceMail($newVoiceMail);
-        // $post_body = file_get_contents('php://input');
-        // appendToVoiceMail(http_build_query($_POST));
-        if ($_POST['record_url'] != NULL) {
-            $shortenUrl = shortenUrl($recordUrl, $GOOGLE_URL_SHORTENER_API_KEY);
-            $hoiio->sms($MY_MOBILE_NUMBER, 'You have received a voicemail from ' . $_POST['from'] . '. Listen at ' . $shortenUrl, $SMS_SENDER_NAME);
-        }
+        // Action: Send an SMS. Hangup
+        handleVoiceMail($_POST['from'], $_POST['record_url']);
+        $hoiio->ivrHangup($session, $THIS_SERVER_URL . '?app_state=hangup', $TEXT_RECORDED_AND_HANGUP);
         break;
+}
+
+/** Handle when there is a voicemail */
+function handleVoiceMail($from, $record_url) {
+    global $hoiio, $MY_MOBILE_NUMBER, $SMS_SENDER_NAME;
+
+    $newVoiceMail = "New Voicemail from " . $from . ": " . $record_url;
+    appendToVoiceMailFile($newVoiceMail);
+    if ($record_url != NULL && $hoiio != NULL) {
+        $shortenUrl = shortenUrl($record_url, $GOOGLE_URL_SHORTENER_API_KEY);
+        $hoiio->sms($MY_MOBILE_NUMBER, 'You have received a voicemail from ' . $from . '. Listen at ' . $shortenUrl, $SMS_SENDER_NAME);
+    }
 }
 
 /** Return the text "Press 1 to ... Press 2 to ..." **/
@@ -95,11 +118,22 @@ function formDirectoryText($directory) {
 }
 
 /** Append a line of text in voicemail.txt **/
-function appendToVoiceMail($text) {
-    $myFile = "voicemail.txt";
-    $fh = fopen($myFile, 'a') or die("can't open file");
+function appendToVoiceMailFile($text) {
+    appendToFile($text, 'voicemails.log');
+}
+
+function appendToCallRecordFile($text) {
+    appendToFile($text, 'calls.log');
+}
+
+function appendToNotificationFile($text) {
+    appendToFile($text, 'notifications.log');
+}
+
+function appendToFile($text, $filename = "others.log") {
+    $fh = fopen($filename, 'a') or die("can't open file");
     fwrite($fh, $text . "\n");
-    fclose($fh);    
+    fclose($fh);
 }
 
 /** Shorten URL **/

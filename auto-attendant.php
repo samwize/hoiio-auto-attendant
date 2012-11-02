@@ -11,12 +11,13 @@
 
 // Configuration file
 include 'config.php';
+include 'utilities.php';
+require 'php-hoiio/Services/HoiioService.php';
 
 // Setup Hoiio SDK
-require 'php-hoiio/Services/HoiioService.php';
 $hoiio = new HoiioService($HOIIO_APP_ID, $HOIIO_ACCESS_TOKEN);
 
-// Logging all Hoiio notifications
+// Log all Hoiio notifications
 $post_body = file_get_contents('php://input');
 appendToNotificationFile(date("[Y-m-d H:i:s] ") . $post_body);
 
@@ -39,12 +40,11 @@ if ($call_state == "ended") {
 $app_state = $_POST["app_state"];
 switch ($app_state) {
     case NULL:
-        // State: A call comes in
+        // State: The number is ringed. A call just came in.
         // Action: Answer the call, play a welcome message, and gather key response
         $notify = $hoiio->parseIVRNotify($_POST);
         $session = $notify->getSession();
         $text = $TEXT_WELCOME_MESSAGE . formDirectoryText($directory);
-        // Gather for a single digit. Repeat 3 times max.
         $hoiio->ivrGather($session, $THIS_SERVER_URL . '?app_state=gather', $text, 1, 10, 3);
         break;
 
@@ -79,11 +79,11 @@ switch ($app_state) {
 
     case 'transfer':
         // State: Transferring
-        // Action: If failed, play a message
+        // Action: If failed, we retry gather.
         if ($_POST['transfer_status'] != 'answered') {
             $notify = $hoiio->parseIVRNotify($_POST);
             $session = $notify->getSession();
-            // If could not transfer, we ask to retry
+            // If we could not transfer, we ask to retry
             $hoiio->ivrGather($session, $THIS_SERVER_URL . '?app_state=gather', $TEXT_TRANSFER_FAILED, 1, 10, 3);       
         }
         break;
@@ -94,71 +94,6 @@ switch ($app_state) {
         handleVoiceMail($_POST['from'], $_POST['record_url']);
         $hoiio->ivrHangup($session, $THIS_SERVER_URL . '?app_state=hangup', $TEXT_RECORDED_AND_HANGUP);
         break;
-}
-
-/** Handle when there is a voicemail */
-function handleVoiceMail($from, $record_url) {
-    global $hoiio, $MY_MOBILE_NUMBER, $SMS_SENDER_NAME;
-
-    $newVoiceMail = "New Voicemail from " . $from . ": " . $record_url;
-    appendToVoiceMailFile($newVoiceMail);
-    if ($record_url != NULL && $hoiio != NULL) {
-        $shortenUrl = shortenUrl($record_url, $GOOGLE_URL_SHORTENER_API_KEY);
-        $hoiio->sms($MY_MOBILE_NUMBER, 'You have received a voicemail from ' . $from . '. Listen at ' . $shortenUrl, $SMS_SENDER_NAME);
-    }
-}
-
-/** Return the text "Press 1 to ... Press 2 to ..." **/
-function formDirectoryText($directory) {
-    $text = '';
-    foreach ($directory as $key => $value) {
-        $text = $text . ' Press ' . $key . ' ' . $value[1]. '.';
-    }
-    return $text;
-}
-
-/** Append a line of text in voicemail.txt **/
-function appendToVoiceMailFile($text) {
-    appendToFile($text, 'voicemails.log');
-}
-
-function appendToCallRecordFile($text) {
-    appendToFile($text, 'calls.log');
-}
-
-function appendToNotificationFile($text) {
-    appendToFile($text, 'notifications.log');
-}
-
-function appendToFile($text, $filename = "others.log") {
-    $fh = fopen($filename, 'a') or die("can't open file");
-    fwrite($fh, $text . "\n");
-    fclose($fh);
-}
-
-/** Shorten URL **/
-function shortenUrl($longUrl, $apiKey = '') {
-    $postData = array('longUrl' => $longUrl, 'key' => $apiKey);
-    $jsonData = json_encode($postData);
-     
-    $curlObj = curl_init();
-     
-    curl_setopt($curlObj, CURLOPT_URL, 'https://www.googleapis.com/urlshortener/v1/url');
-    curl_setopt($curlObj, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($curlObj, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($curlObj, CURLOPT_HEADER, 0);
-    curl_setopt($curlObj, CURLOPT_HTTPHEADER, array('Content-type:application/json'));
-    curl_setopt($curlObj, CURLOPT_POST, 1);
-    curl_setopt($curlObj, CURLOPT_POSTFIELDS, $jsonData);
-     
-    $response = curl_exec($curlObj);
-     
-    //change the response json string to object
-    $json = json_decode($response);
-     
-    curl_close($curlObj);
-     
-    return $json->id;
 }
 
 ?>
